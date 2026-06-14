@@ -1,44 +1,149 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 
+// 🔒 গুগল শিট অথেনটিকেশন ক্লায়েন্ট সেটআপ
+async function getSheetsClient() {
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: { client_email: clientEmail, private_key: privateKey },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  return google.sheets({ version: 'v4', auth });
+}
+
+// 📥 ১. GET মেথড: ওয়ার্কারদের কাজ, উইথড্র এবং পাবলিশ করা কাজের তালিকা ড্যাশবোর্ডে পাঠানো
+export async function GET() {
+  try {
+    const sheets = await getSheetsClient();
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // ক) কাজের সাবমিশন রিড করা (Work_Submissions)
+    const resSubmissions = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Work_Submissions!A2:H' });
+    const subRows = resSubmissions.data.values || [];
+    const submissions = subRows.map((row, index) => ({
+      row: index + 2, 
+      uid: row[0] || 'N/A', 
+      task: row[1] || 'N/A', 
+      price: row[2] || '0৳', 
+      status: row[7] || 'Pending', // H কলাম হলো আপনার স্ট্যাটাস (Index 7)
+    }));
+
+    // খ) উইথড্র রিকোয়েস্ট রিড করা (Withdraw_Requests)
+    const resWithdraws = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Withdraw_Requests!A2:F' });
+    const withdrawRows = resWithdraws.data.values || [];
+    const withdraws = withdrawRows.map((row, index) => ({
+      row: index + 2, 
+      uid: row[0] || 'N/A', 
+      method: row[1] || 'N/A', 
+      number: row[2] || 'N/A', 
+      amount: row[3] || '0৳', 
+      status: row[5] || 'Pending', // F কলাম হলো উইথড্র স্ট্যাটাস (Index 5)
+    }));
+
+    // গ) আপনার পাবলিশ করা নতুন ডায়নামিক কাজের তালিকা রিড করা (Published_Tasks)
+    const resPublished = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Published_Tasks!A2:K' });
+    const publishedRows = resPublished.data.values || [];
+    const publishedTasks = publishedRows.map((row, index) => ({
+      row: index + 2,
+      id: row[0],
+      title: row[1],
+      description: row[2],
+      price: row[3],
+      limit: row[4],
+      pending: row[5],
+      fields: row[6],
+      date: row[7],
+      submitted: row[8] || '0',
+      approved: row[9] || '0',
+      rejected: row[10] || '0',
+    }));
+
+    return NextResponse.json({ submissions, withdraws, publishedTasks }, { status: 200 });
+  } catch (error) {
+    console.error('Admin GET API Error:', error);
+    return NextResponse.json({ error: 'failed_to_fetch' }, { status: 500 });
+  }
+}
+
+// 📤 ২. POST মেথড: কাজ তৈরি, এডিট, ডিলিট এবং স্ট্যাটাস আপডেট করা
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { tabName, rowNumber, newStatus } = body; // কোন ট্যাব, কত নম্বর লাইন, এবং কী লিখতে হবে
+    const sheets = await getSheetsClient();
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // ক) নতুন কাজ ডায়নামিক ফরম্যাটে পাবলিশ করা
+    if (body.actionType === 'PUBLISH_TASK') {
+      const { title, description, price, limit, formatFields } = body.taskData;
+      const taskId = 'TASK_' + Date.now();
+      
+      const today = new Date();
+      const formattedDate = String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: 'Published_Tasks!A2:K',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[taskId, title, description, price, limit, '0', formatFields.join('-'), formattedDate, '0', '0', '0']],
+        },
+      });
+      return NextResponse.json({ success: true, message: 'নতুন কাজ সফলভাবে পাবলিশ হয়েছে!' });
+    }
+
+    // খ) কাজ সংশোধন (Edit Task) করার লজিক
+    if (body.actionType === 'EDIT_TASK') {
+      const { row, title, description, price, limit, formatFields } = body.taskData;
+      
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `Published_Tasks!B${row}:G${row}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[title, description, price, limit, '0', formatFields.join('-')]],
+        },
+      });
+      return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে এডিট হয়েছে!' });
+    }
+
+    // গ) কাজ ডিলিট (Delete Task) করার লজিক
+    if (body.actionType === 'DELETE_TASK') {
+      const { row } = body;
+      
+      await sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        range: `Published_Tasks!A${row}:K${row}`,
+      });
+      return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে ডিলিট হয়েছে!' });
+    }
+
+    // ঘ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস (Approve/Reject) আপডেটের মেইন লজিক
+    const { tabName, rowNumber, newStatus } = body;
 
     if (!tabName || !rowNumber || !newStatus) {
       return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
     }
 
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-
-    const auth = new google.auth.GoogleAuth({
-      credentials: { client_email: clientEmail, private_key: privateKey },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    const sheets = google.sheets({ version: 'v4', auth });
-
-    // কোন কলাম আপডেট হবে তা ঠিক করা (Work_Submissions এর H কলাম বা Withdraw_Requests এর F কলাম)
+    // আপনার কলাম স্ট্রাকচার অনুযায়ী: Work_Submissions = H, Withdraw_Requests = F
     const column = tabName === 'Work_Submissions' ? 'H' : 'F';
-    const range = `${tabName}!${column}${rowNumber}`; // যেমন: Work_Submissions!H5
+    const range = `${tabName}!${column}${rowNumber}`;
 
-    // গুগল শিটে নতুন স্ট্যাটাসটি লিখে দেওয়া
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
-        values: [[newStatus]], // আপনি ওখান থেকে যা লিখে পাঠাবেন (Approved/Rejected/Paid) হুবহু ওটা বসবে
+        values: [[newStatus]],
       },
     });
 
     return NextResponse.json({ success: true, message: 'Status updated in Google Sheet!' }, { status: 200 });
 
   } catch (error) {
-    console.error('Admin Action API Error:', error);
+    console.error('Admin Action POST API Error:', error);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }
