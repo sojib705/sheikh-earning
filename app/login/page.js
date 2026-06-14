@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // ড্যাশবোর্ডে রিডাইরেক্ট করার জন্য
 
 export default function Login() {
   const [formData, setFormData] = useState({ gmail: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const router = useRouter();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -11,8 +15,47 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // এখানে পরবর্তীতে আমরা Next.js API-এর (api/login-action/route.js) সাথে লগইন লজিক কানেক্ট করব
-    console.log('Submitting login data:', formData);
+    setLoading(false);
+    setErrorMsg('');
+    setLoading(true);
+
+    try {
+      // 🚀 এখানে আপনার আসল এপিআই (api/login-action/route.js) কানেক্ট করা হলো
+      const response = await fetch('/api/login-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gmail: formData.gmail,
+          password: formData.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`স্বাগতম, ${data.user.name}! লগইন সফল হয়েছে।`);
+        
+        // ইউজারের ডাটা ব্রাউজারের লোকাল স্টোরেজে সেভ করা (যাতে ড্যাশবোর্ড রিড করতে পারে)
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // সফল হলে সরাসরি ড্যাশবোর্ড পেজে নিয়ে যাবে
+        router.push('/dashboard');
+      } else {
+        // ব্যাকএন্ড থেকে আসা এরর অনুযায়ী মেসেজ সেট করা
+        if (data.error === 'invalid_credentials') {
+          setErrorMsg('ভুল জিমেইল অথবা পাসওয়ার্ড দিয়েছেন!');
+        } else if (data.error === 'empty_fields') {
+          setErrorMsg('দয়া করে সবগুলো বক্স পূরণ করুন।');
+        } else {
+          setErrorMsg('সার্ভারে সমস্যা হচ্ছে, আবার চেষ্টা করুন।');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('নেটওয়ার্ক এরর! ইন্টারনেট কানেকশন চেক করুন।');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,9 +67,16 @@ export default function Login() {
         <h2 className="text-2xl font-black text-slate-800 text-center mb-1">
           ওয়ার্কার লগইন
         </h2>
-        <p className="login-subtitle text-slate-400 text-xs font-medium text-center mb-8">
+        <p className="login-subtitle text-slate-400 text-xs font-medium text-center mb-6">
           আপনার অ্যাকাউন্ট তথ্য দিয়ে প্রবেশ করুন
         </p>
+
+        {/* ⚠️ এরর মেসেজ দেখানোর সুন্দর বক্স (যদি লগইন ফেইল হয়) */}
+        {errorMsg && (
+          <div className="bg-rose-50 border border-rose-100 text-rose-600 p-3.5 rounded-xl text-xs font-bold text-center mb-4">
+            <i className="fa-solid fa-triangle-exclamation mr-1"></i> {errorMsg}
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="login-form space-y-5">
@@ -67,9 +117,14 @@ export default function Login() {
           {/* Submit Button */}
           <button 
             type="submit" 
-            className="submit-login-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98]"
+            disabled={loading}
+            className="submit-login-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-60"
           >
-            লগইন করুন <i className="fa-solid fa-right-to-bracket"></i>
+            {loading ? (
+              <>যাচাই করা হচ্ছে... <i className="fa-solid fa-spinner animate-spin"></i></>
+            ) : (
+              <>লগইন করুন <i className="fa-solid fa-right-to-bracket"></i></>
+            )}
           </button>
           
         </form>
