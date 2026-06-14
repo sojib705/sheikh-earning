@@ -14,7 +14,7 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// 📥 ১. GET মেথড: ওয়ার্কারদের কাজ, উইথড্র এবং পাবলিশ করা কাজের তালিকা ড্যাশবোর্ডে পাঠানো
+// 📥 ১. GET মেথড: ওয়ার্কারদের কাজ, উইথড্র, পাবলিশ করা কাজ এবং লাইভ নোটিশ ড্যাশবোর্ডে পাঠানো
 export async function GET() {
   try {
     const sheets = await getSheetsClient();
@@ -61,21 +61,43 @@ export async function GET() {
       rejected: row[10] || '0',
     }));
 
-    return NextResponse.json({ submissions, withdraws, publishedTasks }, { status: 200 });
+    // ঘ) 📢 লাইভ নোটিশ রিড করা (Notice ট্যাব থেকে ২ নম্বর লাইনের ডাটা)
+    const resNotice = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Notice!A2:B' });
+    const noticeData = resNotice.data.values || [];
+    const currentNotice = noticeData[0] ? noticeData[0][0] : 'আজকের কোনো জরুরি নোটিশ নেই।';
+
+    return NextResponse.json({ submissions, withdraws, publishedTasks, currentNotice }, { status: 200 });
   } catch (error) {
     console.error('Admin GET API Error:', error);
     return NextResponse.json({ error: 'failed_to_fetch' }, { status: 500 });
   }
 }
 
-// 📤 ২. POST মেথড: কাজ তৈরি, এডিট, ডিলিট এবং স্ট্যাটাস আপডেট করা
+// 📤 ২. POST মেথড: কাজ তৈরি, এডিট, ডিলিট, স্ট্যাটাস এবং নোটিশ আপডেট করা
 export async function POST(request) {
   try {
     const body = await request.json();
     const sheets = await getSheetsClient();
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // ক) নতুন কাজ ডায়নামিক ফরম্যাটে পাবলিশ করা
+    // ক) 📢 নোটিশ আপডেট করার নতুন লজিক
+    if (body.actionType === 'UPDATE_NOTICE') {
+      const { noticeText } = body;
+      const today = new Date().toLocaleDateString('bn-BD');
+
+      // Notice ট্যাবের A2 এবং B2 ঘরে নোটিশ ও তারিখ ওভাররাইট (Update) হবে
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: 'Notice!A2:B2',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[noticeText, today]],
+        },
+      });
+      return NextResponse.json({ success: true, message: '📢 নোটিশ সফলভাবে গুগল শিটে আপডেট হয়েছে!' });
+    }
+
+    // খ) নতুন কাজ ডায়নামিক ফরম্যাটে পাবলিশ করা
     if (body.actionType === 'PUBLISH_TASK') {
       const { title, description, price, limit, formatFields } = body.taskData;
       const taskId = 'TASK_' + Date.now();
@@ -94,7 +116,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'নতুন কাজ সফলভাবে পাবলিশ হয়েছে!' });
     }
 
-    // খ) কাজ সংশোধন (Edit Task) করার লজিক
+    // গ) কাজ সংশোধন (Edit Task) করার লজিক
     if (body.actionType === 'EDIT_TASK') {
       const { row, title, description, price, limit, formatFields } = body.taskData;
       
@@ -109,7 +131,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে এডিট হয়েছে!' });
     }
 
-    // গ) কাজ ডিলিট (Delete Task) করার লজিক
+    // ঘ) কাজ ডিলিট (Delete Task) করার লজিক
     if (body.actionType === 'DELETE_TASK') {
       const { row } = body;
       
@@ -120,7 +142,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে ডিলিট হয়েছে!' });
     }
 
-    // ঘ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস (Approve/Reject) আপডেটের মেইন লজিক
+    // ঙ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস (Approve/Reject) আপডেটের মেইন লজিক
     const { tabName, rowNumber, newStatus } = body;
 
     if (!tabName || !rowNumber || !newStatus) {
