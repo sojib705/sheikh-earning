@@ -14,7 +14,7 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// 📥 ১. GET মেথড: ওয়ার্কারদের কাজ, উইথড্র, পাবলিশ করা কাজ এবং লাইভ নোটিশ ড্যাশবোর্ডে পাঠানো
+// 📥 ১. GET মেথড: রিয়াল ডাটা ড্যাশবোর্ডে পাঠানো (কোনো ডেমো পোস্ট থাকবে না)
 export async function GET() {
   try {
     const sheets = await getSheetsClient();
@@ -28,7 +28,7 @@ export async function GET() {
       uid: row[0] || 'N/A', 
       task: row[1] || 'N/A', 
       price: row[2] || '0৳', 
-      status: row[7] || 'Pending', // H কলাম হলো আপনার স্ট্যাটাস (Index 7)
+      status: row[7] || 'Pending',
     }));
 
     // খ) উইথড্র রিকোয়েস্ট রিড করা (Withdraw_Requests)
@@ -40,28 +40,32 @@ export async function GET() {
       method: row[1] || 'N/A', 
       number: row[2] || 'N/A', 
       amount: row[3] || '0৳', 
-      status: row[5] || 'Pending', // F কলাম হলো উইথড্র স্ট্যাটাস (Index 5)
+      status: row[5] || 'Pending',
     }));
 
-    // গ) আপনার পাবলিশ করা নতুন ডায়নামিক কাজের তালিকা রিড করা (Published_Tasks)
+    // গ) পাবলিশ করা নতুন ডায়নামিক কাজের তালিকা (গুগল শিটে যা আছে শুধু তাই আসবে)
     const resPublished = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Published_Tasks!A2:K' });
     const publishedRows = resPublished.data.values || [];
-    const publishedTasks = publishedRows.map((row, index) => ({
-      row: index + 2,
-      id: row[0],
-      title: row[1],
-      description: row[2],
-      price: row[3],
-      limit: row[4],
-      pending: row[5],
-      fields: row[6],
-      date: row[7],
-      submitted: row[8] || '0',
-      approved: row[9] || '0',
-      rejected: row[10] || '0',
-    }));
+    
+    // ফিল্টার করা হয়েছে যাতে ফাকা বা ডিলিট হওয়া রো ড্যাশবোর্ডে ডেমো হিসেবে না দেখায়
+    const publishedTasks = publishedRows
+      .map((row, index) => ({
+        row: index + 2,
+        id: row[0],
+        title: row[1],
+        description: row[2],
+        price: row[3],
+        limit: row[4],
+        pending: row[5],
+        fields: row[6],
+        date: row[7],
+        submitted: row[8] || '0',
+        approved: row[9] || '0',
+        rejected: row[10] || '0',
+      }))
+      .filter(task => task.id && task.title);
 
-    // ঘ) 📢 লাইভ নোটিশ রিড করা (Notice ট্যাব থেকে ২ নম্বর লাইনের ডাটা)
+    // ঘ) লাইভ নোটিশ রিড করা
     const resNotice = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Notice!A2:B' });
     const noticeData = resNotice.data.values || [];
     const currentNotice = noticeData[0] ? noticeData[0][0] : 'আজকের কোনো জরুরি নোটিশ নেই।';
@@ -73,31 +77,90 @@ export async function GET() {
   }
 }
 
-// 📤 ২. POST মেথড: কাজ তৈরি, এডিট, ডিলিট, স্ট্যাটাস এবং নোটিশ আপডেট করা
+// 📤 ২. POST মেথড: কাজ তৈরি, ডিলিট এবং লাইভ ডাটা ও ফরম্যাট চেকার ইঞ্জিন
 export async function POST(request) {
   try {
     const body = await request.json();
     const sheets = await getSheetsClient();
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // ক) 📢 নোটিশ আপডেট করার নতুন লজিক
+    // 🔍 [মেগা ফিচার]: লাইভ ডুপ্লিকেট, ২এফএ এবং মেইল অ্যাক্সেস ফরম্যাট ভ্যালিডেটর
+    if (body.actionType === 'CHECK_DUPLICATE_SUBMISSION') {
+      const { fieldName, value } = body;
+      
+      if (!value || value.trim() === '') {
+        return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
+      }
+
+      // ১. ২এফএ লক: শুধুমাত্র ১৬ বা ৩২ অক্ষরের A-Z এবং 2-7 কম্বিনেশনের সিক্রেট কি নিবে (৬ ডিজিটের সংখ্যা টোটাল রিজেক্টেড)
+      if (fieldName === 'tfa') {
+        const secretInput = value.trim().replace(/\s+/g, ''); // স্পেস রিমুভ
+        const base32Regex = /^[A-Z2-7]{16}$|^[A-Z2-7]{32}$/i; // শুধুমাত্র ১৬ বা ৩২ অক্ষরের Base32 কম্বিনেশন
+        
+        if (!base32Regex.test(secretInput)) {
+          return NextResponse.json({ 
+            isDuplicate: false, 
+            isInvalidFormat: true, 
+            message: 'ভুল ২এফএ! শুধুমাত্র A-Z এবং 2-7 কম্বিনেশনের ১৬ বা ৩২ অক্ষরের আসল সিক্রেট কি দিন।' 
+          });
+        }
+      }
+
+      // ২. MAIL ACCESS পাইপ (|) ফরম্যাট ভ্যালিডেশন
+      if (fieldName === 'mail') {
+        const pipeCount = (value.match(/\|/g) || []).length;
+        const parts = value.split('|');
+        const emailInput = parts[0]?.trim();
+        const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput);
+
+        // মেইল বক্সে ন্যূনতম ৩টি পাইপ থাকতে হবে এবং শুরুতে ইমেইল সঠিক হতে হবে
+        if (pipeCount < 3 || !isEmailValid) {
+          return NextResponse.json({ 
+            isDuplicate: false, 
+            isInvalidFormat: true, 
+            message: 'ভুল মেইল ফরম্যাট! অবশই মেইল|পাসওয়ার্ড|রিকভারি|কুকি এভাবে ৩টি পাইপ (|) চিহ্নসহ দিন।' 
+          });
+        }
+      }
+
+      // ৩. গ্লোবাল ডুপ্লিকেট চেকার (Work_Submissions শিট থেকে রিয়েল-টাইম ডাটা ম্যাচিং)
+      const resSubmissions = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Work_Submissions!A2:G' });
+      const rows = resSubmissions.data.values || [];
+
+      const usedUIDs = rows.map(r => r[0]?.trim().toLowerCase());
+      const usedPasswords = rows.map(r => r[2]?.trim().toLowerCase());
+      const usedCookies = rows.map(r => r[5]?.trim().toLowerCase());
+
+      const checkValue = value.trim().toLowerCase();
+
+      if (fieldName === 'uid' && usedUIDs.includes(checkValue)) {
+        return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই UID/USER টি আগে অন্য কোনো কাজে ব্যবহার করা হয়েছে!' });
+      }
+      if (fieldName === 'password' && usedPasswords.includes(checkValue)) {
+        return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই পাসওয়ার্ডটি আগে অন্য আইডিতে ব্যবহার করা হয়েছে!' });
+      }
+      if (fieldName === 'cookie' && usedCookies.includes(checkValue)) {
+        return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই কুকি ডাটাটি আগে অন্য কেউ সাবমিট করেছে!' });
+      }
+
+      return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
+    }
+
+    // ক) নোটিশ আপডেট করার লজিক
     if (body.actionType === 'UPDATE_NOTICE') {
       const { noticeText } = body;
       const today = new Date().toLocaleDateString('bn-BD');
 
-      // Notice ট্যাবের A2 এবং B2 ঘরে নোটিশ ও তারিখ ওভাররাইট (Update) হবে
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: 'Notice!A2:B2',
         valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[noticeText, today]],
-        },
+        requestBody: { values: [[noticeText, today]] },
       });
       return NextResponse.json({ success: true, message: '📢 নোটিশ সফলভাবে গুগল শিটে আপডেট হয়েছে!' });
     }
 
-    // খ) নতুন কাজ ডায়নামিক ফরম্যাটে পাবলিশ করা
+    // খ) নতুন কাজ ডায়নামিক ফরম্যাটে সিরিয়াল অনুযায়ী তারিখসহ পাবলিশ করা
     if (body.actionType === 'PUBLISH_TASK') {
       const { title, description, price, limit, formatFields } = body.taskData;
       const taskId = 'TASK_' + Date.now();
@@ -116,22 +179,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'নতুন কাজ সফলভাবে পাবলিশ হয়েছে!' });
     }
 
-    // গ) কাজ সংশোধন (Edit Task) করার লজিক
-    if (body.actionType === 'EDIT_TASK') {
-      const { row, title, description, price, limit, formatFields } = body.taskData;
-      
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `Published_Tasks!B${row}:G${row}`,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[title, description, price, limit, '0', formatFields.join('-')]],
-        },
-      });
-      return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে এডিট হয়েছে!' });
-    }
-
-    // ঘ) কাজ ডিলিট (Delete Task) করার লজিক
+    // ঘ) কাজ শিট থেকে সম্পূর্ণরূপে ক্লিয়ার / ডিলিট করার লজিক
     if (body.actionType === 'DELETE_TASK') {
       const { row } = body;
       
@@ -142,14 +190,12 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে ডিলিট হয়েছে!' });
     }
 
-    // ঙ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস (Approve/Reject) আপডেটের মেইন লজিক
+    // ঙ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস আপডেট
     const { tabName, rowNumber, newStatus } = body;
-
     if (!tabName || !rowNumber || !newStatus) {
       return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
     }
 
-    // আপনার কলাম স্ট্রাকচার অনুযায়ী: Work_Submissions = H, Withdraw_Requests = F
     const column = tabName === 'Work_Submissions' ? 'H' : 'F';
     const range = `${tabName}!${column}${rowNumber}`;
 
@@ -157,12 +203,10 @@ export async function POST(request) {
       spreadsheetId,
       range,
       valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [[newStatus]],
-      },
+      requestBody: { values: [[newStatus]] },
     });
 
-    return NextResponse.json({ success: true, message: 'Status updated in Google Sheet!' }, { status: 200 });
+    return NextResponse.json({ success: true, message: 'Status updated successfully!' });
 
   } catch (error) {
     console.error('Admin Action POST API Error:', error);
