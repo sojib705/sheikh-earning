@@ -6,9 +6,7 @@ module.exports = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {
-      // এখানে আপনি চাইলে আপনার নিজস্ব কোনো কাস্টম কালার বা থিম ব্র্যান্ডিং কোড যোগ করতে পারেন
-    },
+    extend: {},
   },
   plugins: [],
-}
+};
