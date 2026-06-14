@@ -1,4 +1,4 @@
-admin-login/'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,15 +15,14 @@ export default function AdminLogin() {
     setLoading(true);
     setErrorMsg('');
 
-    // 🔒 আপনার দেওয়া সিক্রেট অ্যাডমিন জিমেইল ও পাসওয়ার্ড ভেরিফিকেশন
+    // 🔒 আপনার সিক্রেট অ্যাডমিন ডাটা
     const ADMIN_EMAIL = 'sojibmk3899@gmail.com';
     const ADMIN_PASSWORD = 'Sojib11@@';
 
     if (email.trim() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      // সেশন বা লোকাল স্টোরেজে অ্যাডমিন টোকেন সেভ করা
       localStorage.setItem('isAdminAuthenticated', 'true');
       alert('স্বাগতম বস! অ্যাডমিন লগইন সফল হয়েছে।');
-      router.push('/admin-dashboard'); // সফল হলে অ্যাডমিন প্যানেলে নিয়ে যাবে
+      router.push('/admin-dashboard'); 
     } else {
       setErrorMsg('ভুল অ্যাডমিন তথ্য! চুরির চেষ্টা করবেন না।');
       setLoading(false);
@@ -42,7 +41,6 @@ export default function AdminLogin() {
           <p className="text-slate-400">অননুমোদিত ব্যক্তিদের প্রবেশ সম্পূর্ণ নিষিদ্ধ</p>
         </div>
 
-        {/* এরর মেসেজ বক্স */}
         {errorMsg && (
           <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3.5 rounded-xl font-bold text-center">
             ⚠️ {errorMsg}
@@ -51,7 +49,7 @@ export default function AdminLogin() {
 
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-slate-400 font-bold">অ্যাডমিন জিমেইল</label>
+            <label className="text-slate-400 font-bold">অ্যাডমিন ஜিমেইল</label>
             <input 
               type="email" 
               required 
