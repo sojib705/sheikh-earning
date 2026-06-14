@@ -3,7 +3,7 @@ import { google } from 'googleapis';
 
 export async function POST(request) {
   try {
-    // ১. ফর্ম বা ক্লায়েন্ট থেকে আসা জিমেইল ও পাসওয়ার্ড রিসিভ করা
+    // ১. ফর্ম থেকে আসা জিমেইল ও পাসওয়ার্ড রিসিভ করা
     const body = await request.json();
     const { gmail, password } = body;
 
@@ -14,27 +14,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'empty_fields' }, { status: 400 });
     }
 
-    // ২. Vercel এনভায়রনমেন্ট ভেরিয়েবল (Environment Variables) থেকে ডাটা নেওয়া
+    // ২. Vercel এনভায়রনমেন্ট ভেরিয়েবল থেকে ডাটা নেওয়া
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-    
-    // গুগল প্রাইভেট কি-এর নতুন লাইন বা স্পেসের সমস্যা এড়াতে JSON পার্সিং লজিক
     const pKey = process.env.GOOGLE_PRIVATE_KEY;
     const privateKey = pKey && pKey.startsWith('{') ? JSON.parse(pKey).privateKey : pKey;
     const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
 
-    // ৩. গুগল অথেনটিকেশন (Google Auth) ক্লায়েন্ট সেটআপ
+    // ৩. গুগল অথেনটিকেশন ক্লায়েন্ট সেটআপ
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: clientEmail,
-        private_key: privateKey?.replace(/\\n/g, '\n'), // লাইন ব্রেক বা এন্টার ঠিক করার জন্য
+        private_key: privateKey?.replace(/\\n/g, '\n'),
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // ৪. গুগল শিটের 'User_Database' ট্যাব থেকে ডাটা রিড করা
-    const range = 'User_Database!A2:E'; // A=Name, B=Gmail, C=Password, D=UID, E=Status
+    // ৪. গুগল শিটের 'Users' ট্যাব থেকে ডাটা রিড করা (সঠিক রেঞ্জ)
+    const range = 'Users!A2:F'; // A=UID, B=Name, C=Email, D=Password, E=Balance, F=Join_Date
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range,
@@ -43,28 +41,24 @@ export async function POST(request) {
     const rows = response.data.values;
     let login_success = false;
     let user_data = null;
-    let isDisabled = false;
 
     if (rows && rows.length > 0) {
       for (const row of rows) {
-        const sheet_gmail = row[1] ? row[1].trim() : '';
-        const sheet_password = row[2] ? row[2].trim() : '';
+        // আপনার নতুন 'Users' শিটের কলাম অনুযায়ী সঠিক ইনডেক্স সেট করা হলো
+        const sheet_uid = row[0] ? row[0].trim() : '';
+        const sheet_name = row[1] ? row[1].trim() : '';
+        const sheet_gmail = row[2] ? row[2].trim() : '';
+        const sheet_password = row[3] ? row[3].trim() : '';
+        const sheet_balance = row[4] ? row[4].trim() : '0';
 
-        // জিমেইল এবং পাসওয়ার্ড ম্যাচিং (Case-insensitive Gmail check)
+        // জিমেইল এবং পাসওয়ার্ড ম্যাচিং চেক
         if (sheet_gmail.toLowerCase() === input_gmail.toLowerCase() && sheet_password === input_password) {
-          
-          // ইউজার যদি অ্যাডমিন দ্বারা ব্লক বা ইনঅ্যাক্টিভ থাকে (কলাম E)
-          const sheet_status = row[4] ? row[4].trim().toLowerCase() : 'active';
-          if (sheet_status === 'blocked' || sheet_status === 'inactive') {
-            isDisabled = true;
-            break;
-          }
-
           login_success = true;
           user_data = {
-            name: row[0] ? row[0] : 'ওয়ার্কার',
+            uid: sheet_uid,
+            name: sheet_name,
             gmail: sheet_gmail,
-            uid: row[3] ? row[3] : '0000',
+            balance: sheet_balance,
             role: 'worker'
           };
           break;
@@ -72,13 +66,8 @@ export async function POST(request) {
       }
     }
 
-    // ৫. ভিন্ন ভিন্ন কন্ডিশন অনুযায়ী রেসপন্স ব্যাক করা
-    if (isDisabled) {
-      return NextResponse.json({ error: 'account_disabled' }, { status: 403 });
-    }
-
+    // ৫. কন্ডিশন অনুযায়ী রেসপন্স ব্যাক করা
     if (login_success) {
-      // সাকসেস হলে ইউজারের সব ডাটা ফ্রন্টএন্ডে পাঠিয়ে দেওয়া
       return NextResponse.json({ 
         success: true, 
         user: user_data 
