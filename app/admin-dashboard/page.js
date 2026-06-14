@@ -1,43 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // 🔒 চোর তাড়ানোর রিডাইরেকশনের জন্য
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('tasks');
   const [submissions, setSubmissions] = useState([]);
   const [withdraws, setWithdraws] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // ইউজার তৈরির ফর্মের স্টেট (State)
+  // ইউজার তৈরির ফর্মের স্টেট
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [creating, setCreating] = useState(false);
 
-  // ১. গুগল শিট থেকে সব ডাটা রিয়েল-টাইমে লোড করার ফাংশন
+  // 🔒 ১. সিকিউরিটি গার্ড লক (লগইন ছাড়া কেউ ঢুকলে লাথি মেরে বের করে দেবে)
+  useEffect(() => {
+    const isAdmin = localStorage.getItem('isAdminAuthenticated');
+    if (isAdmin !== 'true') {
+      alert('অ্যাক্সেস ডিনাইড! চুরির চেষ্টা করবেন না, প্রথমে লগইন করুন।');
+      router.push('/admin-login'); // চোরকে তাড়িয়ে সরাসরি লগইন পেজে পাঠাবে
+    }
+  }, [router]);
+
+  // ২. গুগল শিট থেকে লাইভ ডাটা রিয়াল-টাইমে লোড করার ফাংশন
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      // এখানে আপনার তৈরি করা fetch-data বা ডাটা ফেচিং এপিআই কানেক্ট হবে
+      // এখানে আপনার ডাটা রিড করার আসল এپیআই কল করা হলো
+      const response = await fetch('/api/admin-action', { method: 'GET' });
+      const data = await response.json();
       
-      // ডামি ডাটা (টেস্ট করার সুবিধার্থে):
-      setSubmissions([
-        { row: 2, date: '2026-06-14 02:30', task: '0F-2FA-HOTMAIL', uid: 'uid_884732', status: 'Pending', price: '১০৳' },
-        { row: 3, date: '2026-06-14 01:15', task: '0F-2FA-HOTMAIL', uid: 'uid_110293', status: 'Approved', price: '১০৳' }
-      ]);
-      setWithdraws([
-        { row: 2, date: '2026-06-14 11:00', method: 'বিকাশ', number: '01823315984', amount: '৫০০৳', status: 'Pending' }
-      ]);
+      if (!data.error) {
+        setSubmissions(data.submissions || []);
+        setWithdraws(data.withdraws || []);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Data loading error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAdminData();
+    // শুধুমাত্র অ্যাডমিন ভেরিফাইড হলেই ডাটা লোড হবে
+    const isAdmin = localStorage.getItem('isAdminAuthenticated');
+    if (isAdmin === 'true') {
+      loadAdminData();
+    }
   }, []);
 
-  // ২. বাটনে ক্লিক করলে গুগল শিটে ডাটা পাঠানোর মেইন লজিক (Approve/Reject/Paid)
+  // ৩. বাটনে ক্লিক করলে গুগল শিটে ডাটা পাঠানোর মেইন লজিক (Approve/Reject/Paid)
   const handleAdminAction = async (tabName, rowNumber, statusText) => {
     try {
       const response = await fetch('/api/admin-action', {
@@ -52,8 +65,8 @@ export default function AdminDashboard() {
 
       const data = await response.json();
       if (data.success) {
-        alert(`গুগল শিটের ${rowNumber} নম্বর লাইনে সফলভাবে "${statusText}" লেখা হয়েছে!`);
-        loadAdminData(); 
+        alert(`গুগল শিটের ${tabName} ট্যাবের ${rowNumber} নম্বর লাইনে সফলভাবে "${statusText}" লেখা হয়েছে!`);
+        loadAdminData(); // সফল হলে পেজের ডাটা অটো রিলোড হবে
       } else {
         alert('Action ফেইল হয়েছে, আবার চেষ্টা করুন।');
       }
@@ -63,7 +76,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // ৩. নতুন ইউজার অ্যাকাউন্ট তৈরি করে গুগল শিটে পাঠানোর লজিক
+  // ৪. নতুন ওয়ার্কার অ্যাকাউন্ট তৈরি করে গুগল শিটে পাঠানোর লজিক
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setCreating(true);
@@ -90,8 +103,22 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 pb-12">
       <header className="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-lg">
-        <h1 className="font-black text-base uppercase tracking-wider text-violet-400">Sheikh Earning Admin</h1>
-        <span className="bg-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold">প্রধান অ্যাডমিন</span>
+        <h1 className="font-black text-base uppercase tracking-wider text-violet-400">
+          <i className="fa-solid fa-user-shield mr-1"></i> Sheikh Earning Admin
+        </h1>
+        <div className="flex items-center gap-3">
+          <span className="bg-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold text-violet-300">প্রধান অ্যাডমিন</span>
+          {/* লগআউট বাটন */}
+          <button 
+            onClick={() => {
+              localStorage.removeItem('isAdminAuthenticated');
+              router.push('/admin-login');
+            }} 
+            className="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition"
+          >
+            লগআউট <i className="fa-solid fa-right-from-bracket ml-1"></i>
+          </button>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
@@ -109,7 +136,9 @@ export default function AdminDashboard() {
         </div>
 
         {loading && activeTab !== 'create_user' ? (
-          <div className="text-center py-12 text-slate-400 font-bold text-sm">শিট থেকে ডাটা চেক করা হচ্ছে...</div>
+          <div className="text-center py-12 text-slate-400 font-bold text-sm">
+            <i className="fa-solid fa-spinner animate-spin mr-2"></i>শিট থেকে ডাটা চেক করা হচ্ছে...
+          </div>
         ) : (
           <>
             {/* কাজের টেবিল */}
@@ -127,18 +156,20 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700 text-slate-300">
-                      {submissions.map((item) => (
+                      {submissions.length === 0 ? (
+                        <tr><td colSpan="5" className="p-4 text-center text-slate-500">কোনো কাজের সাবমিশন পাওয়া যায়নি</td></tr>
+                      ) : submissions.map((item) => (
                         <tr key={item.row} className="hover:bg-slate-700/20">
                           <td className="p-4 font-bold text-violet-400">{item.uid}</td>
                           <td className="p-4 font-bold">{item.task}</td>
                           <td className="p-4 font-black text-emerald-400">{item.price}</td>
                           <td className="p-4">
-                            <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${item.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                              {item.status}
+                            <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${item.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : item.status === 'Reject' || item.status === 'Rejected' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                              {item.status || 'Pending'}
                             </span>
                           </td>
                           <td className="p-4 flex items-center justify-center gap-2">
-                            {item.status === 'Pending' ? (
+                            {(!item.status || item.status === 'Pending') ? (
                               <>
                                 <button onClick={() => handleAdminAction('Work_Submissions', item.row, 'Approved')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold transition">Approve</button>
                                 <button onClick={() => handleAdminAction('Work_Submissions', item.row, 'Reject')} className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg font-bold transition">Reject</button>
@@ -171,15 +202,21 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700 text-slate-300">
-                      {withdraws.map((item) => (
+                      {withdraws.length === 0 ? (
+                        <tr><td colSpan="6" className="p-4 text-center text-slate-500">কোনো উইথড্র রিকোয়েস্ট পাওয়া যায়নি</td></tr>
+                      ) : withdraws.map((item) => (
                         <tr key={item.row} className="hover:bg-slate-700/20">
                           <td className="p-4 font-bold text-violet-400">{item.uid}</td>
-                          <td className="p-4 font-bold">{item.method}</td>
-                          <td className="p-4 tracking-wider">{item.number}</td>
+                          <td className="p-4 font-bold-uppercase text-violet-400">{item.method}</td>
+                          <td className="p-4 tracking-wider font-mono">{item.number}</td>
                           <td className="p-4 font-black text-emerald-400">{item.amount}</td>
-                          <td className="p-4"><span className="bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-lg font-bold">{item.status}</span></td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-lg font-bold ${item.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400' : item.status === 'Cancelled' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                              {item.status || 'Pending'}
+                            </span>
+                          </td>
                           <td className="p-4 flex items-center justify-center gap-2">
-                            {item.status === 'Pending' ? (
+                            {(!item.status || item.status === 'Pending') ? (
                               <>
                                 <button onClick={() => handleAdminAction('Withdraw_Requests', item.row, 'Paid')} className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-1.5 rounded-lg font-bold transition">পেইড (Paid)</button>
                                 <button onClick={() => handleAdminAction('Withdraw_Requests', item.row, 'Cancelled')} className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg font-bold transition">বাতিল</button>
@@ -196,10 +233,10 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ইউজার অ্যাকাউন্ট তৈরির নতুন ফর্ম */}
+            {/* ইউজার অ্যাকাউন্ট তৈরির ফর্ম */}
             {activeTab === 'create_user' && (
               <div className="max-w-md bg-slate-800 rounded-2xl shadow-xl border border-slate-700/50 p-6 space-y-4 mx-auto md:mx-0">
-                <h2 className="text-sm font-black uppercase text-violet-400 tracking-wide">নতুন ওয়ার্কার অ্যাকাউন্ট তৈরি করুন</h2>
+                <h2 className="text-sm font-black uppercase text-violet-400 tracking-wide">নতুন ওয়ারhkar অ্যাকাউন্ট তৈরি করুন</h2>
                 <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
                   <div className="space-y-1">
                     <label className="text-slate-400 font-bold">ওয়ার্কারের নাম</label>
