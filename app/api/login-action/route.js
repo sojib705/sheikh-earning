@@ -20,21 +20,21 @@ export async function POST(request) {
     const sheets = await getSheetsClient();
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // Users ট্যাব থেকে UID, Name, Email, Password ডাটা তুলে আনা
+    // Users ট্যাব থেকে A, B, C কলামের ডাটা তুলে আনা (Name, Email, Password)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Users!A2:D',
+      range: 'Users!A2:C',
     });
     const rows = response.data.values || [];
 
-    // ওয়ার্কারের দেওয়া ইনপুট থেকে অতিরিক্ত স্পেস বা বড় হাতের অক্ষর ট্রিম করা
+    // ইনপুট ডাটা ট্রিম ও লোয়ারকেস করা
     const inputEmail = email?.trim().toLowerCase();
     const inputPassword = password?.trim();
 
-    // গুগল শিটের ডাটার সাথে নিখুঁতভাবে মেলানোর লজিক
+    // 🎯 [কলাম ফিক্সড লজিক]: আপনার শিট অনুযায়ী B কলাম (row[1]) ইমেইল এবং C কলাম (row[2]) পাসওয়ার্ড
     const matchedUser = rows.find(row => {
-      const dbEmail = row[2]?.trim().toLowerCase();
-      const dbPassword = row[3]?.trim();
+      const dbEmail = row[1]?.trim().toLowerCase(); // B কলাম
+      const dbPassword = row[2]?.trim();            // C কলাম
       return dbEmail === inputEmail && dbPassword === inputPassword;
     });
 
@@ -42,9 +42,9 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         user: {
-          uid: matchedUser[0],
-          name: matchedUser[1],
-          email: matchedUser[2]
+          uid: 'UID_' + Math.floor(100000 + Math.random() * 900000), // ব্যাকআপ UID জেনারেটর
+          name: matchedUser[0], // A কলাম (Name)
+          email: matchedUser[1] // B কলাম (Email)
         }
       });
     } else {
