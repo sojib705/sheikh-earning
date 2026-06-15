@@ -2,7 +2,7 @@
 
 /* মূল লেআউট এবং গ্রিড */
 .mainContainer {
-  @apply space-y-6 animate-in fade-in duration-200;
+  @apply space-y-6;
 }
 .gridContainer {
   @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
@@ -64,4 +64,4 @@
 /* ছোট ব্যাজ */
 .activeBadge {
   @apply bg-slate-950 px-2.5 py-1 rounded-lg text-amber-400 font-mono font-bold text-[10px];
-  }
+}
