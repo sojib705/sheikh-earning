@@ -89,7 +89,6 @@ export async function POST(request) {
         return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
       }
 
-      // ১. ২এফএ লক: শুধুমাত্র ১৬ বা ৩২ অক্ষরের A-Z এবং 2-7 কম্বিনেশনের সিক্রেট কি নিবে
       if (fieldName === 'tfa') {
         const secretInput = value.trim().replace(/\s+/g, ''); 
         const base32Regex = /^[A-Z2-7]{16}$|^[A-Z2-7]{32}$/i; 
@@ -103,7 +102,6 @@ export async function POST(request) {
         }
       }
 
-      // ২. MAIL ACCESS পাইপ (|) ফরম্যাট ভ্যালিডেশন
       if (fieldName === 'mail') {
         const pipeCount = (value.match(/\|/g) || []).length;
         const parts = value.split('|');
@@ -119,7 +117,6 @@ export async function POST(request) {
         }
       }
 
-      // ৩. গ্লোবাল ডুপ্লিকেট চেকার (Work_Submissions শিট থেকে রিয়েল-টাইম ডাটা ম্যাচিং)
       const resSubmissions = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Work_Submissions!A2:G' });
       const rows = resSubmissions.data.values || [];
 
@@ -140,6 +137,46 @@ export async function POST(request) {
       }
 
       return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
+    }
+
+    // ✏️ [নতুন অ্যাড করা লজিক]: ইউজারের ইনফরমেশন (নাম, ইমেইল, পাসওয়ার্ড) এডিট করা
+    if (body.actionType === 'EDIT_USER_DETAILS') {
+      const { uid, newName, newEmail, newPassword } = body;
+      
+      const resUsers = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Users!A2:A' });
+      const rows = resUsers.data.values || [];
+      const rowIndex = rows.findIndex(r => r[0] === uid);
+
+      if (rowIndex !== -1) {
+        const actualRow = rowIndex + 2;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `Users!B${actualRow}:D${actualRow}`, // B=Name, C=Email, D=Password
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [[newName, newEmail, newPassword]] }
+        });
+        return NextResponse.json({ success: true, message: 'ইউজারের তথ্য সফলভাবে আপডেট হয়েছে!' });
+      }
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // 🗑️ [নতুন অ্যাড করা লজিক]: ইউজারকে ডাটাবেজ থেকে চিরতরে মুছে ফেলা
+    if (body.actionType === 'DELETE_USER') {
+      const { uid } = body;
+      
+      const resUsers = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Users!A2:A' });
+      const rows = resUsers.data.values || [];
+      const rowIndex = rows.findIndex(r => r[0] === uid);
+
+      if (rowIndex !== -1) {
+        const actualRow = rowIndex + 2;
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId,
+          range: `Users!A${actualRow}:F${actualRow}` // A থেকে F পর্যন্ত পুরো লাইন ক্লিয়ার করে দেওয়া হবে
+        });
+        return NextResponse.json({ success: true, message: 'ইউজারকে চিরতরে ডিলিট করা হয়েছে!' });
+      }
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // ক) নোটিশ আপডেট করার লজিক
