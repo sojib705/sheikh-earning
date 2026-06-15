@@ -1,24 +1,40 @@
-/* ১. Tailwind CSS এর মেইন ৩টি পাওয়ারফুল লেয়ার (এটি অবশ্যই সবার ওপরে থাকবে) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ২. আপনার আগের পিএইচপির css/style.css এর কিছু গ্লোবাল কাস্টম ডিজাইন (যদি লাগে) */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Arial', sans-serif;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-/* আপনার প্রজেক্টের যদি কোনো বিশেষ ব্যাকগ্রাউন্ড ইফেক্ট বা কাস্টম অ্যানিমেশন থাকে, তা নিচে লিখতে পারেন */
-.public-body {
-  background-image: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+/* 🌀 কাস্টম স্ক্রোলবার ডিজাইন (কোনো ভুল সিলেক্টর ছাড়া) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ইনপুট ফিল্ডের ডিফল্ট স্পিনার রিমুভার */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
