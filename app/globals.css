@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🌌 মেগা ডার্ক প্রিমিয়াম গ্লোবাল স্টাইল */
 :root {
   --background: #020617;
   --foreground: #f8fafc;
@@ -9,32 +10,73 @@
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+  font-family: 'Inter', Arial, sans-serif;
+  min-height: 100vh;
 }
 
-/* 🌀 কাস্টম স্ক্রোলবার ডিজাইন (কোনো ভুল সিলেক্টর ছাড়া) */
+/* 📥 প্রিমিয়াম কার্ড এবং মডাল গ্লোয়িং ইফেক্ট (আপনার আগের লুক) */
+.bg-slate-900, .bg-slate-900\/80 {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 50px -10px rgba(99, 102, 241, 0.05) !important;
+}
+
+/* 🔒 ইনপুট বক্স প্রিমিয়াম ডিজাইন */
+input, select, textarea {
+  background-color: #020617 !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  color: #ffffff !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.4) !important;
+}
+
+/* 🚀 বাটন মেগা গ্রেডিয়েন্ট ও গ্লো */
+.bg-gradient-to-r, button[type="submit"] {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.4) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease !important;
+}
+
+.bg-gradient-to-r:hover, button[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 25px -8px rgba(79, 70, 229, 0.6) !important;
+}
+
+.bg-gradient-to-r:active, button[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+/* 📢 এনিমেটেড নোটিশ মার্কি */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  animation: marquee 25s linear infinite;
+}
+
+/* 🌀 মসৃণ কাস্টম স্ক্রোলবার */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: #020617;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
-}
-
-/* ইনপুট ফিল্ডের ডিফল্ট স্পিনার রিমুভার */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+  background: #4f46e5;
 }
