@@ -20,7 +20,20 @@ export async function GET() {
     const sheets = await getSheetsClient();
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // ক) কাজের সাবমিশন রিড করা (Work_Submissions)
+    // 🆕 ক) Users ট্যাব থেকে ইউজার লিস্ট রিড করা (যাতে উইথড্র পেজে ব্যালেন্স পায়)
+    const resUsers = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Users!A2:F' });
+    const userRows = resUsers.data.values || [];
+    const workers = userRows.map((row, index) => ({
+      row: index + 2,
+      uid: row[0] || '',
+      name: row[1] || '',
+      email: row[2] || '',
+      password: row[3] || '',
+      totalIncome: Number(row[4]) || 0, // আপনার শিটের Balance কলাম
+      joinedDate: row[5] || '',
+    }));
+
+    // খ) কাজের সাবমিশন রিড করা (Work_Submissions)
     const resSubmissions = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Work_Submissions!A2:H' });
     const subRows = resSubmissions.data.values || [];
     const submissions = subRows.map((row) => ({
@@ -30,7 +43,7 @@ export async function GET() {
       status: row[7] || 'Pending',
     }));
 
-    // খ) উইথড্র রিকোয়েস্ট রিড করা (Withdraw_Requests)
+    // গ) উইথড্র রিকোয়েস্ট রিড করা (Withdraw_Requests)
     const resWithdraws = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Withdraw_Requests!A2:F' });
     const withdrawRows = resWithdraws.data.values || [];
     const withdraws = withdrawRows.map((row, index) => ({
@@ -39,10 +52,11 @@ export async function GET() {
       method: row[1] || 'N/A', 
       number: row[2] || 'N/A', 
       amount: row[3] || '0৳', 
+      date: row[4] || '',
       status: row[5] || 'Pending',
     }));
 
-    // গ) পাবলিশ করা কাজের তালিকা
+    // ঘ) পাবলিশ করা কাজের তালিকা
     const resPublished = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Published_Tasks!A2:K' });
     const publishedRows = resPublished.data.values || [];
     const publishedTasks = publishedRows
@@ -62,15 +76,15 @@ export async function GET() {
       }))
       .filter(task => task.id && task.title);
 
-    // ঘ) লাইভ নোটিশ রিড করা
+    // ঙ) লাইভ নোটিশ রিড করা
     const resNotice = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Notice!A2:B' });
     const noticeData = resNotice.data.values || [];
     const currentNotice = noticeData[0] ? noticeData[0][0] : 'আজকের কোনো জরুরি নোটিশ নেই।';
 
-    return NextResponse.json({ submissions, withdraws, publishedTasks, currentNotice }, { status: 200 });
+    return NextResponse.json({ success: true, workers, submissions, withdraws, publishedTasks, currentNotice }, { status: 200 });
   } catch (error) {
     console.error('Admin GET API Error:', error);
-    return NextResponse.json({ error: 'failed_to_fetch' }, { status: 500 });
+    return NextResponse.json({ error: 'failed_to_fetch', success: false }, { status: 500 });
   }
 }
 
@@ -139,7 +153,7 @@ export async function POST(request) {
       return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
     }
 
-    // ✏️ [নতুন অ্যাড করা লজিক]: ইউজারের ইনফরমেশন (নাম, ইমেইল, পাসওয়ার্ড) এডিট করা
+    // ✏️ ইউজারের ইনফরমেশন (নাম, ইমেইল, পাসওয়ার্ড) এডিট করা
     if (body.actionType === 'EDIT_USER_DETAILS') {
       const { uid, newName, newEmail, newPassword } = body;
       
@@ -151,7 +165,7 @@ export async function POST(request) {
         const actualRow = rowIndex + 2;
         await sheets.spreadsheets.values.update({
           spreadsheetId,
-          range: `Users!B${actualRow}:D${actualRow}`, // B=Name, C=Email, D=Password
+          range: `Users!B${actualRow}:D${actualRow}`,
           valueInputOption: 'USER_ENTERED',
           requestBody: { values: [[newName, newEmail, newPassword]] }
         });
@@ -160,7 +174,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // 🗑️ [নতুন অ্যাড করা লজিক]: ইউজারকে ডাটাবেজ থেকে চিরতরে মুছে ফেলা
+    // 🗑️ ইউজারকে ডাটাবেজ থেকে চিরতরে মুছে ফেলা
     if (body.actionType === 'DELETE_USER') {
       const { uid } = body;
       
@@ -172,7 +186,7 @@ export async function POST(request) {
         const actualRow = rowIndex + 2;
         await sheets.spreadsheets.values.clear({
           spreadsheetId,
-          range: `Users!A${actualRow}:F${actualRow}` // A থেকে F পর্যন্ত পুরো লাইন ক্লিয়ার করে দেওয়া হবে
+          range: `Users!A${actualRow}:F${actualRow}` 
         });
         return NextResponse.json({ success: true, message: 'ইউজারকে চিরতরে ডিলিট করা হয়েছে!' });
       }
@@ -222,6 +236,21 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে ডিলিট হয়েছে!' });
     }
 
+    // 💸 [নতুন অ্যাড করা লজিক]: উইথড্র রিকোয়েস্ট গুগল শিটে যুক্ত করা
+    if (body.actionType === 'SUBMIT_WITHDRAW_REQUEST') {
+      const { email, method, number, amount, date } = body.payload;
+      
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: 'Withdraw_Requests!A2:F',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[email, method, number, `${amount}৳`, date, 'Pending']]
+        },
+      });
+      return NextResponse.json({ success: true, message: 'উইথড্র রিকোয়েস্ট যুক্ত হয়েছে!' });
+    }
+
     // ঘ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস আপডেট
     const { tabName, rowNumber, newStatus } = body;
     if (!tabName || !rowNumber || !newStatus) {
@@ -242,6 +271,6 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Admin Action POST API Error:', error);
-    return NextResponse.json({ error: 'server_error' }, { status: 500 });
+    return NextResponse.json({ error: 'server_error', success: false }, { status: 500 });
   }
 }
