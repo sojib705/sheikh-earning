@@ -1,0 +1,67 @@
+/* app/admin-dashboard/workers/workers.module.css */
+
+/* মূল কন্টেইনার এবং সার্চ বক্স */
+.mainContainer {
+  @apply space-y-4 animate-in fade-in duration-200;
+}
+.searchBox {
+  @apply bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-sm flex items-center gap-2.5 shadow-md;
+}
+.searchInput {
+  @apply w-full bg-transparent text-white focus:outline-none font-medium text-xs placeholder-slate-600;
+}
+
+/* টেবিল কার্ড এবং হেডার */
+.tableCard {
+  @apply bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl;
+}
+.cardHeader {
+  @apply p-4 bg-slate-800/20 border-b border-slate-800 font-black text-slate-400 uppercase tracking-wider flex justify-between items-center text-xs;
+}
+.btnRefresh {
+  @apply bg-slate-950 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-xl font-bold transition hover:bg-slate-800;
+}
+
+/* টেবিল স্টাইল */
+.table {
+  @apply w-full text-left border-collapse;
+}
+.tableHead {
+  @apply bg-slate-800/40 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-wider;
+}
+.tableBody {
+  @apply divide-y divide-slate-800/60 text-slate-300 font-medium;
+}
+.tableRow {
+  @apply hover:bg-slate-950/40 transition;
+}
+.tableCell {
+  @apply p-4;
+}
+
+/* কন্ট্রোল বাটন */
+.btnEdit {
+  @apply bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-3 py-2 rounded-xl font-black shadow-md transition active:scale-95 text-[11px];
+}
+
+/* মডাল (পপ-আপ) স্টাইল */
+.modalOverlay {
+  @apply fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+}
+.modalContainer {
+  @apply bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150;
+}
+.modalInput {
+  @apply w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none focus:border-violet-500 transition-all;
+}
+.modalInputBalance {
+  @apply w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-emerald-400 font-black text-sm focus:outline-none focus:border-emerald-500;
+}
+
+/* মডালের বাটন */
+.btnCancel {
+  @apply flex-1 bg-slate-800 text-slate-300 py-3.5 rounded-xl hover:bg-slate-700 transition;
+}
+.btnSave {
+  @apply flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3.5 rounded-xl shadow-xl shadow-emerald-600/10 transition uppercase tracking-wide hover:from-emerald-500 hover:to-teal-500;
+}
