@@ -59,8 +59,6 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error(err);
-    } military: {
-      setLoading(false);
     } finally {
       setLoading(false);
     }
