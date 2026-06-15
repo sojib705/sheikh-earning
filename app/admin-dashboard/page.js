@@ -231,7 +231,7 @@ export default function AdminDashboard() {
         <h1 className="font-black text-sm uppercase tracking-wider text-violet-400 flex items-center gap-2">
           <i className="fa-solid fa-user-shield"></i> Sheikh Earning Admin Panel
         </h1>
-        <button onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition">লগআউট ➔</button>
+        <button type="button" onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition">লগআউট ➔</button>
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
           <div className="text-center py-16 text-slate-500 font-bold tracking-widest uppercase">গুগল শিট থেকে ডাটা সিঙ্ক হচ্ছে...</div>
         ) : (
           <>
-            {/* ১. কাজের পোস্ট ও রিপোর্ট ম্যানেজার ট্যাব (একক ফাইলে মার্জড) */}
+            {/* ১. কাজের পোস্ট ও রিপোর্ট ম্যানেজার ট্যাব */}
             {activeTab === 'tasks' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -282,7 +282,7 @@ export default function AdminDashboard() {
                             <th className="p-4">কাজের নাম</th>
                             <th className="p-4">রেট</th>
                             <th className="p-4">লিমিট</th>
-                            <th className="p-4 text-center">কontrol</th>
+                            <th className="p-4 text-center">কন্ট্রোল</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ৩. সমস্ত ওয়ার্কার্স লিস্ট */}
+            {/* ৩. সমস্ত ওয়ার্কারส์ লিস্ট */}
             {activeTab === 'workers_list' && (
               <div className="space-y-4">
                 <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-sm flex items-center gap-2.5">
