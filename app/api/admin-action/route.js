@@ -14,7 +14,7 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// 📥 ১. GET মেথড: রিয়াল ডাটা ড্যাশবোর্ডে পাঠানো (কোনো ডেমো পোস্ট থাকবে না)
+// 📥 ১. GET মেথড: রিয়াল ডাটা ড্যাশবোর্ডে পাঠানো
 export async function GET() {
   try {
     const sheets = await getSheetsClient();
@@ -23,8 +23,7 @@ export async function GET() {
     // ক) কাজের সাবমিশন রিড করা (Work_Submissions)
     const resSubmissions = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Work_Submissions!A2:H' });
     const subRows = resSubmissions.data.values || [];
-    const submissions = subRows.map((row, index) => ({
-      row: index + 2, 
+    const submissions = subRows.map((row) => ({
       uid: row[0] || 'N/A', 
       task: row[1] || 'N/A', 
       price: row[2] || '0৳', 
@@ -43,11 +42,9 @@ export async function GET() {
       status: row[5] || 'Pending',
     }));
 
-    // গ) পাবলিশ করা নতুন ডায়নামিক কাজের তালিকা (গুগল শিটে যা আছে শুধু তাই আসবে)
+    // গ) পাবলিশ করা কাজের তালিকা
     const resPublished = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Published_Tasks!A2:K' });
     const publishedRows = resPublished.data.values || [];
-    
-    // ফিল্টার করা হয়েছে যাতে ফাকা বা ডিলিট হওয়া রো ড্যাশবোর্ডে ডেমো হিসেবে না দেখায়
     const publishedTasks = publishedRows
       .map((row, index) => ({
         row: index + 2,
@@ -84,7 +81,7 @@ export async function POST(request) {
     const sheets = await getSheetsClient();
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // 🔍 [মেগা ফিচার]: লাইভ ডুপ্লিকেট, ২এফএ এবং মেইল অ্যাক্সেস ফরম্যাট ভ্যালিডেটর
+    // 🔍 লাইভ ডুপ্লিকেট, ২এফএ এবং মেইল অ্যাক্সেস ফরম্যাট ভ্যালিডেটর
     if (body.actionType === 'CHECK_DUPLICATE_SUBMISSION') {
       const { fieldName, value } = body;
       
@@ -92,16 +89,16 @@ export async function POST(request) {
         return NextResponse.json({ isDuplicate: false, isInvalidFormat: false, message: '' });
       }
 
-      // ১. ২এফএ লক: শুধুমাত্র ১৬ বা ৩২ অক্ষরের A-Z এবং 2-7 কম্বিনেশনের সিক্রেট কি নিবে (৬ ডিজিটের সংখ্যা টোটাল রিজেক্টেড)
+      // ১. ২এফএ লক: শুধুমাত্র ১৬ বা ৩২ অক্ষরের A-Z এবং 2-7 কম্বিনেশনের সিক্রেট কি নিবে
       if (fieldName === 'tfa') {
-        const secretInput = value.trim().replace(/\s+/g, ''); // স্পেস রিমুভ
-        const base32Regex = /^[A-Z2-7]{16}$|^[A-Z2-7]{32}$/i; // শুধুমাত্র ১৬ বা ৩২ অক্ষরের Base32 কম্বিনেশন
+        const secretInput = value.trim().replace(/\s+/g, ''); 
+        const base32Regex = /^[A-Z2-7]{16}$|^[A-Z2-7]{32}$/i; 
         
         if (!base32Regex.test(secretInput)) {
           return NextResponse.json({ 
             isDuplicate: false, 
             isInvalidFormat: true, 
-            message: 'ভুল ২এফএ! শুধুমাত্র A-Z এবং 2-7 কম্বিনেশনের ১৬ বা ৩২ অক্ষরের আসল সিক্রেট কি দিন।' 
+            message: 'ভুল ২এফএ! শুধুমাত্র A-Z AND 2-7 কম্বিনেশনের ১৬ বা ৩২ অক্ষরের আসল সিক্রেট কি দিন।' 
           });
         }
       }
@@ -113,7 +110,6 @@ export async function POST(request) {
         const emailInput = parts[0]?.trim();
         const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput);
 
-        // মেইল বক্সে ন্যূনতম ৩টি পাইপ থাকতে হবে এবং শুরুতে ইমেইল সঠিক হতে হবে
         if (pipeCount < 3 || !isEmailValid) {
           return NextResponse.json({ 
             isDuplicate: false, 
@@ -134,7 +130,7 @@ export async function POST(request) {
       const checkValue = value.trim().toLowerCase();
 
       if (fieldName === 'uid' && usedUIDs.includes(checkValue)) {
-        return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই UID/USER টি আগে অন্য কোনো কাজে ব্যবহার করা হয়েছে!' });
+        return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই UID/USER টি আগে ব্যবহার করা হয়েছে!' });
       }
       if (fieldName === 'password' && usedPasswords.includes(checkValue)) {
         return NextResponse.json({ isDuplicate: true, isInvalidFormat: false, message: 'এই পাসওয়ার্ডটি আগে অন্য আইডিতে ব্যবহার করা হয়েছে!' });
@@ -160,7 +156,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: '📢 নোটিশ সফলভাবে গুগল শিটে আপডেট হয়েছে!' });
     }
 
-    // খ) নতুন কাজ ডায়নামিক ফরম্যাটে সিরিয়াল অনুযায়ী তারিখসহ পাবলিশ করা
+    // খ) নতুন কাজ ডায়নামিক ফরম্যাটে পাবলিশ করা
     if (body.actionType === 'PUBLISH_TASK') {
       const { title, description, price, limit, formatFields } = body.taskData;
       const taskId = 'TASK_' + Date.now();
@@ -179,10 +175,9 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'নতুন কাজ সফলভাবে পাবলিশ হয়েছে!' });
     }
 
-    // ঘ) কাজ শিট থেকে সম্পূর্ণরূপে ক্লিয়ার / ডিলিট করার লজিক
+    // গ) কাজ ডিলিট করার লজিক
     if (body.actionType === 'DELETE_TASK') {
       const { row } = body;
-      
       await sheets.spreadsheets.values.clear({
         spreadsheetId,
         range: `Published_Tasks!A${row}:K${row}`,
@@ -190,7 +185,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'কাজটি সফলভাবে ডিলিট হয়েছে!' });
     }
 
-    // ঙ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস আপডেট
+    // ঘ) ওয়ার্কার কাজ ও উইথড্রয়াল স্ট্যাটাস আপডেট
     const { tabName, rowNumber, newStatus } = body;
     if (!tabName || !rowNumber || !newStatus) {
       return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
