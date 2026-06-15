@@ -8,14 +8,14 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('tasks');
   const [submissions, setSubmissions] = useState([]);
   const [withdraws, setWithdraws] = useState([]);
-  const [publishedTasks, setPublishedTasks] = useState([]); // পাবলিশ করা রিয়েল কাজের লিস্ট
+  const [publishedTasks, setPublishedTasks] = useState([]); 
   const [workers, setWorkers] = useState([]); 
   const [notice, setNotice] = useState(''); 
   const [loading, setLoading] = useState(true);
   const [updatingNotice, setUpdatingNotice] = useState(false);
   const router = useRouter();
 
-  // সার্চ এবং এডিট মдাল স্টেটসমূহ
+  // সার্চ এবং এডিট মডাল স্টেটসমূহ
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWorker, setSelectedWorker] = useState(null); 
   const [editForm, setEditForm] = useState({ amountToAdd: '', email: '', password: '' });
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       if (!data.error) {
         setSubmissions(data.submissions || []);
         setWithdraws(data.withdraws || []);
-        setPublishedTasks(data.publishedTasks || []); // ডাটাবেজ থেকে রানিং কাজ নেওয়া
+        setPublishedTasks(data.publishedTasks || []); 
         setNotice(data.currentNotice || '');
         
         setWorkers([
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-12 font-sans antialiased select-none text-xs">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-12 font-sans antialiased text-xs">
       
       {/* 🔮 স্ক্রিনের এক সাইটে ভেসে আসা টোস্ট নোটিফিকেশন বার */}
       {toast.show && (
@@ -176,10 +176,10 @@ export default function AdminDashboard() {
 
       {/* হেডার */}
       <header className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shadow-2xl max-w-7xl mx-auto rounded-b-2xl">
-        <h1 className="font-black text-xs uppercase tracking-wider text-violet-400 flex items-center gap-2">
+        <h1 className="font-black text-sm uppercase tracking-wider text-violet-400 flex items-center gap-2">
           <i className="fa-solid fa-user-shield"></i> Sheikh Earning Admin Panel
         </h1>
-        <button onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition active:scale-95">লগআউট ➔</button>
+        <button onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition active:scale-95">لگآؤٹ ➔</button>
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
         {/* নোটিশ বোর্ড ইনপুট */}
         <section className="bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-xl max-w-2xl">
           <form onSubmit={handleUpdateNotice} className="flex flex-col sm:flex-row gap-3">
-            <input type="text" required value={notice} onChange={(e) => setNotice(e.target.value)} placeholder="এখানে আজকের জরুরি নোটিশটি লিখুন..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 font-medium" />
+            <input type="text" required value={notice} onChange={(e) => setNotice(e.target.value)} placeholder="এখানে আজকের জরুরি নোটিশটি লিখুন..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none" />
             <button type="submit" disabled={updatingNotice} className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black text-xs px-6 py-3 rounded-xl shadow-lg transition active:scale-95 whitespace-nowrap">{updatingNotice ? 'আপডেট হচ্ছে...' : 'নোটিশ লাইভ করুন 📢'}</button>
           </form>
         </section>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ৩. সমস্ত ওয়ার্কার্স লিস্ট ও ইনস্ট্যান্ট লেটার সার্চ */}
+            {/* ৩. সমস্ত ওয়ার্কারส์ লিস্ট ও ইনস্ট্যান্ট লেটার সার্চ */}
             {activeTab === 'workers_list' && (
               <div className="space-y-4">
                 <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-sm flex items-center gap-2.5">
