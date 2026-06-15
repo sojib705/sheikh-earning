@@ -1,17 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import styles from './tasks.module.css'; // 🎨 নতুন ডিজাইন ফাইল কানেক্ট করা হলো
 
 export default function AdminTasksPage() {
   const [publishedTasks, setPublishedTasks] = useState([]); 
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // কাজের পোস্ট করার ফর্ম স্টেট
   const [taskForm, setTaskForm] = useState({ title: '', description: '', price: '', limit: '' });
   const [publishing, setPublishing] = useState(false);
 
-  // গুগল শিট থেকে ডাটা রিফ্রেশ করার লোকাল ইঞ্জিন
   const loadTasksAndReports = async () => {
     try {
       setLoading(true);
@@ -33,7 +32,6 @@ export default function AdminTasksPage() {
     loadTasksAndReports();
   }, []);
 
-  // 🚀 নতুন ফেসবুক আইডি কাজ শিটে পাবলিশ করার লজিক
   const handlePublishTask = async (e) => {
     e.preventDefault();
     setPublishing(true);
@@ -65,7 +63,6 @@ export default function AdminTasksPage() {
     }
   };
 
-  // 🗑️ একটিভ কাজ ডিলিট করার লজিক
   const handleDeleteTask = async (row) => {
     if (!confirm('আপনি কি নিশ্চিত যে এই কাজটি চিরতরে ডিলিট করতে চান?')) return;
     try {
@@ -84,7 +81,6 @@ export default function AdminTasksPage() {
     }
   };
 
-  // 📝 ওয়ার্কার সাবমিশন রিপোর্ট রিভিউ অ্যাকশন (Approve/Reject)
   const handleAdminAction = async (tabName, rowNumber, statusText) => {
     try {
       const response = await fetch('/api/admin-action', {
@@ -107,55 +103,54 @@ export default function AdminTasksPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className={styles.mainContainer}>
       
-      {/* 📢 উপরের অংশ: নতুন কাজ পোস্ট এবং এক্টিভ লিস্ট গ্রিড */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={styles.gridContainer}>
         
         {/* ক) কাজের পোস্ট ফর্ম */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl h-fit">
+        <div className={styles.formCard}>
           <h3 className="text-xs font-black uppercase text-violet-400 tracking-wider mb-4">📢 নতুন কাজের পোস্ট করুন</h3>
-          <form onSubmit={handlePublishTask} className="space-y-4">
-            <input type="text" required placeholder="কাজের শিরোনাম" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none focus:border-violet-500 font-medium" />
+          <form onSubmit={handlePublishTask} className="space-y-4 text-xs">
+            <input type="text" required placeholder="কাজের শিরোনাম" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} className={styles.inputField} />
             <div className="grid grid-cols-2 gap-3">
-              <input type="number" required placeholder="রেট ৳" value={taskForm.price} onChange={e => setTaskForm({...taskForm, price: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none focus:border-violet-500" />
-              <input type="number" required placeholder="লিমিট" value={taskForm.limit} onChange={e => setTaskForm({...taskForm, limit: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none focus:border-violet-500" />
+              <input type="number" required placeholder="রেট ৳" value={taskForm.price} onChange={e => setTaskForm({...taskForm, price: e.target.value})} className={styles.inputField} />
+              <input type="number" required placeholder="লিমিট" value={taskForm.limit} onChange={e => setTaskForm({...taskForm, limit: e.target.value})} className={styles.inputField} />
             </div>
-            <textarea required placeholder="কাজের বিবরণ বা নিয়মাবলী..." value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 h-24 text-white focus:outline-none focus:border-violet-500 resize-none" />
-            <button type="submit" disabled={publishing} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black py-4 rounded-xl uppercase tracking-wider transition active:scale-95 shadow-lg shadow-indigo-600/10">
+            <textarea required placeholder="কাজের বিবরণ বা নিয়মাবলী..." value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} className={`${styles.inputField} h-24 resize-none`} />
+            <button type="submit" disabled={publishing} className={styles.submitBtn}>
               {publishing ? 'পাবলিশ হচ্ছে...' : 'পাবলিশ জব পোস্ট 🚀'}
             </button>
           </form>
         </div>
 
         {/* খ) এক্টিভ কাজের তালিকা টেবিল */}
-        <div className="lg:col-span-2 bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden h-fit shadow-2xl">
-          <div className="p-4 bg-slate-800/20 border-b border-slate-800 font-black text-slate-400 uppercase tracking-wider flex justify-between items-center">
+        <div className={styles.activeTasksCard}>
+          <div className={styles.cardHeader}>
             <span>রানিং কাজের তালিকা (লাইভ গুগল শিট সিরিয়াল)</span>
-            <span className="bg-slate-950 px-2.5 py-1 rounded-lg text-amber-400 font-mono font-bold text-[10px]">{publishedTasks.length} Active</span>
+            <span className={styles.activeBadge}>{publishedTasks.length} Active</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className={styles.table}>
               <thead>
-                <tr className="bg-slate-800/40 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-wider">
-                  <th className="p-4">তারিখ</th>
-                  <th className="p-4">কাজের নাম</th>
-                  <th className="p-4">রেট</th>
-                  <th className="p-4">লিমিট বাকি</th>
-                  <th className="p-4 text-center">কন্ট্রোল</th>
+                <tr className={styles.tableHead}>
+                  <th className={styles.tableCell}>তারিখ</th>
+                  <th className={styles.tableCell}>কাজের নাম</th>
+                  <th className={styles.tableCell}>রেট</th>
+                  <th className={styles.tableCell}>লিমিট বাকি</th>
+                  <th className={`${styles.tableCell} text-center`}>কন্ট্রোল</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+              <tbody className={styles.tableBody}>
                 {publishedTasks.length === 0 ? (
-                  <tr><td colSpan="5" className="p-8 text-center text-slate-600 font-bold uppercase">কোনো একটিভ কাজ পাওয়া যায়নি!</td></tr>
+                  <tr><td colSpan="5" className="p-8 text-center text-slate-600 font-bold uppercase text-xs">কোনো একটিভ কাজ পাওয়া যায়নি!</td></tr>
                 ) : publishedTasks.map((task) => (
-                  <tr key={task.row} className="hover:bg-slate-950/40 transition">
-                    <td className="p-4 font-mono font-bold text-amber-400">{task.date}</td>
-                    <td className="p-4 font-bold text-slate-200">{task.title}</td>
-                    <td className="p-4 font-black text-emerald-400">{task.price}৳</td>
-                    <td className="p-4 font-bold text-slate-400">{task.limit} টি</td>
-                    <td className="p-4 text-center">
-                      <button type="button" onClick={() => handleDeleteTask(task.row)} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition border border-rose-500/10">✕ Delete</button>
+                  <tr key={task.row} className={styles.tableRow}>
+                    <td className={`${styles.tableCell} font-mono font-bold text-amber-400 text-xs`}>{task.date}</td>
+                    <td className={`${styles.tableCell} font-bold text-slate-200 text-xs`}>{task.title}</td>
+                    <td className={`${styles.tableCell} font-black text-emerald-400 text-xs`}>{task.price}৳</td>
+                    <td className={`${styles.tableCell} font-bold text-slate-400 text-xs`}>{task.limit} টি</td>
+                    <td className={`${styles.tableCell} text-center`}>
+                      <button type="button" onClick={() => handleDeleteTask(task.row)} className={styles.btnDelete}>✕ Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -167,31 +162,31 @@ export default function AdminTasksPage() {
       </div>
 
       {/* 📝 নিচের অংশ: ওয়ার্কারদের সাবমিট করা রিপোর্ট তালিকা */}
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
-        <div className="p-4 bg-slate-800/20 border-b border-slate-800 font-black text-slate-400 uppercase tracking-wider flex justify-between items-center">
+      <div className={styles.reportCard}>
+        <div className={styles.cardHeader}>
           <span>ওয়ার্কারদের সাবমিট করা ফেসবুক আইডি রিপোর্ট তালিকা</span>
-          <button onClick={loadTasksAndReports} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold hover:bg-slate-800 transition">🔄 রিফ্রেশ রিপোর্ট</button>
+          <button onClick={loadTasksAndReports} className={styles.btnRefresh}>🔄 রিফ্রেশ রিপোর্ট</button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className={styles.table}>
             <thead>
-              <tr className="bg-slate-800/40 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-wider">
-                <th className="p-4">ইউজার UID / ইমেইল</th>
-                <th className="p-4">কাজের ক্যাটাগরি</th>
-                <th className="p-4">টাকার পরিমাণ</th>
-                <th className="p-4">স্ট্যাটাস</th>
-                <th className="p-4 text-center">অ্যাকশন কন্ট্রোল</th>
+              <tr className={styles.tableHead}>
+                <th className={styles.tableCell}>ইউজার UID / ইমেইল</th>
+                <th className={styles.tableCell}>কাজের ক্যাটাগরি</th>
+                <th className={styles.tableCell}>টাকার পরিমাণ</th>
+                <th className={styles.tableCell}>স্ট্যাটাস</th>
+                <th className={`${styles.tableCell} text-center`}>অ্যাকশন কন্ট্রোল</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+            <tbody className={styles.tableBody}>
               {submissions.length === 0 ? (
-                <tr><td colSpan="5" className="p-6 text-center text-slate-600 font-bold">কোনো কাজের সাবমিশন রিপোর্ট এভেলেবল নেই</td></tr>
+                <tr><td colSpan="5" className="p-6 text-center text-slate-600 font-bold text-xs">কোনো কাজের সাবমিশন রিপোর্ট এভেলেবল নেই</td></tr>
               ) : submissions.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-950/20">
-                  <td className="p-4 font-mono font-bold text-violet-400">{item.uid}</td>
-                  <td className="p-4 font-bold text-slate-200">{item.task}</td>
-                  <td className="p-4 font-black text-emerald-400">{item.price}</td>
-                  <td className="p-4">
+                <tr key={idx} className={styles.tableRow}>
+                  <td className={`${styles.tableCell} font-mono font-bold text-violet-400 text-xs`}>{item.uid}</td>
+                  <td className={`${styles.tableCell} font-bold text-slate-200 text-xs`}>{item.task}</td>
+                  <td className={`${styles.tableCell} font-black text-emerald-400 text-xs`}>{item.price}</td>
+                  <td className={styles.tableCell}>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${
                       item.status === 'Approved' 
                         ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' 
@@ -202,13 +197,13 @@ export default function AdminTasksPage() {
                       {item.status || 'Pending'}
                     </span>
                   </td>
-                  <td className="p-4 flex items-center justify-center gap-2">
+                  <td className={`${styles.tableCell} flex items-center justify-center gap-2`}>
                     {(!item.status || item.status === 'Pending') ? (
                       <>
-                        <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row || (idx + 2), 'Approved')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-black shadow-md transition active:scale-95">Approve</button>
-                        <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row || (idx + 2), 'Reject')} className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl font-black shadow-md transition active:scale-95">Reject</button>
+                        <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row || (idx + 2), 'Approved')} className={styles.btnApprove}>Approve</button>
+                        <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row || (idx + 2), 'Reject')} className={styles.btnReject}>Reject</button>
                       </>
-                    ) : <span className="text-slate-500 italic font-bold">রিভিউ সম্পন্ন</span>}
+                    ) : <span className="text-slate-500 italic font-bold text-xs">রিভিউ সম্পন্ন</span>}
                   </td>
                 </tr>
               ))}
