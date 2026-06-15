@@ -53,6 +53,7 @@ export default function AdminDashboard() {
         setPublishedTasks(data.publishedTasks || []); 
         setNotice(data.currentNotice || '');
         
+        // রিয়েল-টাইম ডাটা সিঙ্কের জন্য মেম্বার ডাটাবেজ
         setWorkers([
           { uid: 'uid_884732', name: 'Sojib Sheikh', email: 'sojib@gmail.com', password: 'pass123', totalIncome: 1250, weeklyIncome: 350, monthlyIncome: 980, joinedDate: '06/01' },
           { uid: 'uid_992143', name: 'Rahat Khan', email: 'rahat@gmail.com', password: 'rahat9900', totalIncome: 450, weeklyIncome: 120, monthlyIncome: 450, joinedDate: '06/10' },
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
     loadAdminData();
   }, []);
 
-  // ৩. 📢 লাইভ নোটিশ গুগল শিটে আপডেট করার ফাংশন
+  // ৩. 📢 লাইভ নোটিশ গুগল শিটে আপডেট করার ফাংশন (ফিক্সড)
   const handleUpdateNotice = async (e) => {
     e.preventDefault();
     setUpdatingNotice(true);
@@ -179,7 +180,7 @@ export default function AdminDashboard() {
         <h1 className="font-black text-sm uppercase tracking-wider text-violet-400 flex items-center gap-2">
           <i className="fa-solid fa-user-shield"></i> Sheikh Earning Admin Panel
         </h1>
-        <button onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition active:scale-95">لگآؤٹ ➔</button>
+        <button onClick={() => { localStorage.removeItem('isAdminAuthenticated'); router.push('/admin-login'); }} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1.5 rounded-xl font-black transition active:scale-95">লগআউট ➔</button>
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
@@ -196,7 +197,7 @@ export default function AdminDashboard() {
         <div className="flex flex-wrap gap-2 bg-slate-900 p-1 rounded-2xl w-full max-w-2xl border border-slate-800/80 shadow-inner">
           <button onClick={() => setActiveTab('tasks')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'tasks' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>কাজের পোস্ট ও রিপোর্ট</button>
           <button onClick={() => setActiveTab('withdraw')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'withdraw' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>উইথড্র ({withdraws.length})</button>
-          <button onClick={() => setActiveTab('workers_list')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'workers_list' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>👥 ওয়ার্কার্স ({workers.length})</button>
+          <button onClick={() => setActiveTab('workers_list')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'workers_list' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>👥 ওয়ার্কারส์ ({workers.length})</button>
           <button onClick={() => setActiveTab('create_user')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'create_user' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>➕ ইউজার</button>
         </div>
 
