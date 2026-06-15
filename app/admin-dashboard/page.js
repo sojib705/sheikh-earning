@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import TasksManager from './components/TasksManager';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('tasks');
@@ -13,16 +12,20 @@ export default function AdminDashboard() {
   const [notice, setNotice] = useState(''); 
   const [loading, setLoading] = useState(true);
   const [updatingNotice, setUpdatingNotice] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', price: '', limit: '' });
+  const [publishing, setPublishing] = useState(false);
   const router = useRouter();
 
+  // সার্চ এবং এডিট মডাল স্টেটসমূহ
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWorker, setSelectedWorker] = useState(null); 
   const [editForm, setEditForm] = useState({ amountToAdd: '', email: '', password: '' });
 
+  // ইউজার তৈরির ফর্মের স্টেট
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [creating, setCreating] = useState(false);
 
-  // 📢 টোস্ট অ্যালার্ট স্টেট
+  // 📢 সাইড নোটিফিকেশন টোস্ট অ্যালার্ট স্টেট
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -38,7 +41,7 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  // লাইভ ডাটা লোড ফাংশন
+  // গুগল শিট থেকে লাইভ ডাটা লোড করার ফাংশন
   const loadAdminData = async () => {
     try {
       setLoading(true);
@@ -67,6 +70,57 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadAdminData();
   }, []);
+
+  // 🚀 নতুন কাজ পাবলিশ করার লজিক
+  const handlePublishTask = async (e) => {
+    e.preventDefault();
+    setPublishing(true);
+    try {
+      const response = await fetch('/api/admin-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'PUBLISH_TASK',
+          taskData: { 
+            title: taskForm.title,
+            description: taskForm.description,
+            price: taskForm.price,
+            limit: taskForm.limit,
+            formatFields: ['UID', 'PASSWORD', '2FA', 'MAIL', 'COOKIE']
+          }
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('🚀 নতুন ফেসবুক আইডি কাজ সফলভাবে গুগল শিটে পাবলিশ হয়েছে!', 'success');
+        setTaskForm({ title: '', description: '', price: '', limit: '' });
+        loadAdminData();
+      }
+    } catch (err) {
+      showToast('কাজ পাবলিশ করতে সমস্যা হয়েছে!', 'error');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  // 🗑️ কাজ শিট থেকে সম্পূর্ণরূপে ডিলিট করার লজিক
+  const handleDeleteTask = async (row) => {
+    if (!confirm('আপনি কি নিশ্চিত যে এই কাজটি চিরতরে ডিলিট করতে চান?')) return;
+    try {
+      const response = await fetch('/api/admin-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionType: 'DELETE_TASK', row })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('কাজটি সফলভাবে ডিলিট করা হয়েছে!', 'success');
+        loadAdminData();
+      }
+    } catch (err) {
+      showToast('ডিলিট করা যায়নি!', 'error');
+    }
+  };
 
   // 📢 নোটিশ আপডেট
   const handleUpdateNotice = async (e) => {
@@ -149,7 +203,7 @@ export default function AdminDashboard() {
       return w;
     });
     setWorkers(updatedWorkers);
-    showToast(`প্রোফাইল ও ব্যালেন্স সফলভাবে সেভ হয়েছে!`, 'success');
+    showToast(`প্রোফাইল ও ব্যালেন্স সফলভাবে শিটে সেভ হয়েছে!`, 'success');
     setSelectedWorker(null);
     setEditForm({ amountToAdd: '', email: '', password: '' });
   };
@@ -162,6 +216,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-12 font-sans antialiased text-xs">
       
+      {/* 🔮 সাইড টোস্ট নোটিফিকেশন বার */}
       {toast.show && (
         <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-5 py-4 rounded-2xl shadow-2xl border font-bold text-white transition-all duration-300 ${
           toast.type === 'error' ? 'bg-rose-600 border-rose-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-500/30'
@@ -171,6 +226,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* হেডার */}
       <header className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shadow-2xl max-w-7xl mx-auto rounded-b-2xl">
         <h1 className="font-black text-sm uppercase tracking-wider text-violet-400 flex items-center gap-2">
           <i className="fa-solid fa-user-shield"></i> Sheikh Earning Admin Panel
@@ -180,6 +236,7 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         
+        {/* নোটিশ বোর্ড */}
         <section className="bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-xl max-w-2xl">
           <form onSubmit={handleUpdateNotice} className="flex flex-col sm:flex-row gap-3">
             <input type="text" required value={notice} onChange={(e) => setNotice(e.target.value)} placeholder="এখানে আজকের জরুরি নোটিশটি লিখুন..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none" />
@@ -187,6 +244,7 @@ export default function AdminDashboard() {
           </form>
         </section>
 
+        {/* মেগা ট্যাব বাটন */}
         <div className="flex flex-wrap gap-2 bg-slate-900 p-1 rounded-2xl w-full max-w-2xl border border-slate-800/80 shadow-inner">
           <button type="button" onClick={() => setActiveTab('tasks')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'tasks' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>কাজের পোস্ট ও রিপোর্ট</button>
           <button type="button" onClick={() => setActiveTab('withdraw')} className={`flex-1 py-2.5 px-3 rounded-xl font-black transition uppercase tracking-wider ${activeTab === 'withdraw' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>উইথড্র ({withdraws.length})</button>
@@ -198,10 +256,94 @@ export default function AdminDashboard() {
           <div className="text-center py-16 text-slate-500 font-bold tracking-widest uppercase">গুগল শিট থেকে ডাটা সিঙ্ক হচ্ছে...</div>
         ) : (
           <>
+            {/* ১. কাজের পোস্ট ও রিপোর্ট ম্যানেজার ট্যাব (একক ফাইলে মার্জড) */}
             {activeTab === 'tasks' && (
-              <TasksManager publishedTasks={publishedTasks} handleRefresh={loadAdminData} showToast={showToast} submissions={submissions} handleAdminAction={handleAdminAction} />
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl h-fit">
+                    <h3 className="text-xs font-black uppercase text-violet-400 tracking-wider mb-4">📢 নতুন কাজের পোস্ট করুন</h3>
+                    <form onSubmit={handlePublishTask} className="space-y-4">
+                      <input type="text" required placeholder="কাজের শিরোনাম" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none focus:border-violet-500 font-medium" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <input type="number" required placeholder="রেট ৳" value={taskForm.price} onChange={e => setTaskForm({...taskForm, price: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none" />
+                        <input type="number" required placeholder="লিমিট" value={taskForm.limit} onChange={e => setTaskForm({...taskForm, limit: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-white focus:outline-none" />
+                      </div>
+                      <textarea required placeholder="কাজের বিবরণ..." value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 h-24 text-white focus:outline-none focus:border-violet-500 resize-none" />
+                      <button type="submit" disabled={publishing} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black py-4 rounded-xl uppercase tracking-wider transition">{publishing ? 'পাবলিশ হচ্ছে...' : 'পাবলিশ জব পোস্ট 🚀'}</button>
+                    </form>
+                  </div>
+                  <div className="lg:col-span-2 bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden h-fit shadow-2xl">
+                    <div className="p-4 bg-slate-800/20 border-b border-slate-800 font-black text-slate-400 uppercase tracking-wider">রানিং কাজের তালিকা (লাইভ গুগল শিট সিরিয়াল)</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-800/40 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px]">
+                            <th className="p-4">তারিখ</th>
+                            <th className="p-4">কাজের নাম</th>
+                            <th className="p-4">রেট</th>
+                            <th className="p-4">লিমিট</th>
+                            <th className="p-4 text-center">কontrol</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+                          {!publishedTasks || publishedTasks.length === 0 ? (
+                            <tr><td colSpan="5" className="p-8 text-center text-slate-600 font-bold uppercase">কোনো একটিভ কাজ নেই!</td></tr>
+                          ) : publishedTasks.map((task) => (
+                            <tr key={task.row} className="hover:bg-slate-950/40 transition">
+                              <td className="p-4 font-mono font-bold text-amber-400">{task.date}</td>
+                              <td className="p-4 font-bold text-slate-200">{task.title}</td>
+                              <td className="p-4 font-black text-emerald-400">{task.price}৳</td>
+                              <td className="p-4 font-bold text-slate-400">{task.limit} টি</td>
+                              <td className="p-4 text-center">
+                                <button type="button" onClick={() => handleDeleteTask(task.row)} className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white px-3 py-1 rounded-xl font-black transition">✕ Delete</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+                  <div className="p-4 bg-slate-800/20 border-b border-slate-800 font-black text-slate-400 uppercase tracking-wider">ওয়ার্কারদের সাবমিট করা কাজের রিপোর্ট তালিকা</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-800/40 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px]">
+                          <th className="p-4">ইউজার UID</th>
+                          <th className="p-4">কাজের নাম</th>
+                          <th className="p-4">টাকা</th>
+                          <th className="p-4">স্ট্যাটাস</th>
+                          <th className="p-4 text-center">অ্যাকশন</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+                        {submissions.length === 0 ? (
+                          <tr><td colSpan="5" className="p-6 text-center text-slate-600 font-bold">কোনো কাজের সাবমিশন রিপোর্ট পাওয়া যায়নি</td></tr>
+                        ) : submissions.map((item) => (
+                          <tr key={item.row} className="hover:bg-slate-950/20">
+                            <td className="p-4 font-mono font-bold text-violet-400">{item.uid}</td>
+                            <td className="p-4 font-bold text-slate-200">{item.task}</td>
+                            <td className="p-4 font-black text-emerald-400">{item.price}</td>
+                            <td className="p-4"><span className={`px-2 py-0.5 rounded text-[10px] font-black border ${item.status === 'Approved' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10' : 'bg-amber-500/5 text-amber-400 border-amber-500/10'}`}>{item.status || 'Pending'}</span></td>
+                            <td className="p-4 flex items-center justify-center gap-2">
+                              {(!item.status || item.status === 'Pending') ? (
+                                <>
+                                  <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row, 'Approved')} className="bg-emerald-600 text-white px-3 py-1 rounded-xl font-black">Approve</button>
+                                  <button type="button" onClick={() => handleAdminAction('Work_Submissions', item.row, 'Reject')} className="bg-rose-600 text-white px-3 py-1 rounded-xl font-black">Reject</button>
+                                </>
+                              ) : <span className="text-slate-500 italic">রিভিউড</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             )}
 
+            {/* ২. উইথড্র টেবিল ট্যাব */}
             {activeTab === 'withdraw' && (
               <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
@@ -242,6 +384,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* ৩. সমস্ত ওয়ার্কার্স লিস্ট */}
             {activeTab === 'workers_list' && (
               <div className="space-y-4">
                 <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-sm flex items-center gap-2.5">
@@ -278,6 +421,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* ৪. ইউজার অ্যাকাউন্ট তৈরি */}
             {activeTab === 'create_user' && (
               <div className="max-w-md bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4 mx-auto md:mx-0 shadow-2xl">
                 <h2 className="text-sm font-black uppercase text-violet-400 tracking-wide">নতুন ওয়ার্কার তৈরি করুন</h2>
@@ -295,7 +439,7 @@ export default function AdminDashboard() {
 
       {selectedWorker && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4 ready-in">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-start border-b border-slate-800 pb-2">
               <div><h3 className="text-xs font-black text-slate-100">⚙️ প্রোফাইল ও ব্যালেন্স মডিফায়ার</h3><p className="text-[10px] text-violet-400 font-mono mt-0.5">{selectedWorker.name} ({selectedWorker.uid})</p></div>
               <button type="button" onClick={() => setSelectedWorker(null)} className="text-slate-400 font-bold bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg">✕ Close</button>
